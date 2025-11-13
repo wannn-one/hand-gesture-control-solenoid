@@ -3,7 +3,7 @@ import mediapipe as mp
 import serial
 import time
 
-import config.config as config
+from config import config
 
 
 def send_command(serial_port, command):

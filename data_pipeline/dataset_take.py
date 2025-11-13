@@ -1,37 +1,24 @@
-import cv2
-import os
-import time
-import numpy as np
-import mediapipe as mp
 import csv
+import os
+
+import cv2
+import mediapipe as mp
+import numpy as np
+
+from config import config
 
 mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
 
-# --- KONFIGURASI ---
-# 1. Path untuk menyimpan folder dataset
-DATA_PATH = os.path.join(os.getcwd(), 'Dataset_Gestur')
-
-# 2. Nama file CSV untuk menyimpan koordinat
-CSV_FILE_NAME = 'dataset_landmarks.csv'
-
-# 3. Daftar nama gestur yang ingin direkam
-actions = np.array(['buka_kunci', 'kunci'])
-
-# 4. Jumlah video (urutan pengambilan) untuk setiap gestur
-jumlah_sequence = 20
-
-# 5. Jumlah frame yang akan diambil per sequence
-jumlah_frame = 20
-# ----------------------------------------
+actions = np.array(config.ACTIONS)
+jumlah_sequence = config.NUM_SEQUENCES
+jumlah_frame = config.FRAMES_PER_SEQUENCE
 
 def buat_folder():
     """Membuat struktur folder yang dibutuhkan."""
+    config.DATASET_DIR.mkdir(parents=True, exist_ok=True)
     for action in actions:
-        try:
-            os.makedirs(os.path.join(DATA_PATH, action))
-        except FileExistsError:
-            pass
+        (config.DATASET_DIR / action).mkdir(parents=True, exist_ok=True)
 
 def ekstrak_keypoints(results):
     """Mengekstrak koordinat landmarks dari hasil deteksi MediaPipe."""
@@ -44,15 +31,16 @@ def ekstrak_keypoints(results):
 
 def siapkan_file_csv():
     """Membuat file CSV dan menulis header jika file belum ada."""
-    file_exists = os.path.isfile(CSV_FILE_NAME)
+    config.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    file_exists = config.CSV_FILE_PATH.is_file()
     if not file_exists:
         # Buat header untuk CSV
         header = ['label', 'sequence', 'frame_idx', 'image_path']
         # Tambahkan nama kolom untuk setiap landmark
         for i in range(21):
             header += [f'rh_x_{i}', f'rh_y_{i}', f'rh_z_{i}']
-        
-        with open(CSV_FILE_NAME, mode='w', newline='') as f:
+
+        with config.CSV_FILE_PATH.open(mode='w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(header)
 
@@ -61,20 +49,23 @@ def main():
     buat_folder()
     siapkan_file_csv()
     
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(config.DATA_CAPTURE_CAMERA_INDEX)
     if not cap.isOpened():
         print("Error: Tidak bisa membuka kamera.")
         return
 
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.CAMERA_WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
 
-    with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+    with mp_holistic.Holistic(
+        min_detection_confidence=config.MIN_DETECTION_CONFIDENCE,
+        min_tracking_confidence=config.MIN_TRACKING_CONFIDENCE,
+    ) as holistic:
         for action in actions:
             # Cari tahu sequence terakhir yang sudah direkam agar bisa melanjutkan
             try:
                 # Dapatkan daftar folder sequence yang sudah ada untuk gestur ini
-                dir_list = os.listdir(os.path.join(DATA_PATH, action))
+                dir_list = os.listdir(config.DATASET_DIR / action)
                 # Ambil nomor sequence terakhir dan tambahkan 1
                 start_sequence = max([int(d) for d in dir_list if d.isdigit()]) + 1
             except (ValueError, FileNotFoundError):
@@ -84,10 +75,7 @@ def main():
 
             for sequence in range(start_sequence, start_sequence + jumlah_sequence):
                 # Buat folder untuk sequence ini
-                try:
-                    os.makedirs(os.path.join(DATA_PATH, action, str(sequence)))
-                except FileExistsError:
-                    pass
+                (config.DATASET_DIR / action / str(sequence)).mkdir(parents=True, exist_ok=True)
 
                 # Tunggu pengguna siap
                 while True:
@@ -101,7 +89,7 @@ def main():
                         break
                 
                 # Hitung mundur
-                for t in range(3, 0, -1):
+                for t in range(config.RECORD_COUNTDOWN_SECONDS, 0, -1):
                     ret, frame = cap.read()
                     cv2.putText(frame, str(t), (280, 240), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3, cv2.LINE_AA)
                     cv2.imshow('Perekam Dataset', frame)
@@ -129,18 +117,18 @@ def main():
 
                     # --- SIMPAN DATA GAMBAR & KOORDINAT ---
                     # 1. Tentukan path untuk menyimpan gambar
-                    image_path = os.path.join(DATA_PATH, action, str(sequence), f"{frame_num}.jpg")
+                    image_path = config.DATASET_DIR / action / str(sequence) / f"{frame_num}.jpg"
                     # 2. Simpan gambar
-                    cv2.imwrite(image_path, frame)
+                    cv2.imwrite(str(image_path), frame)
                     
                     # 3. Ekstrak keypoints
                     keypoints = ekstrak_keypoints(results)
                     
                     # 4. Buat satu baris data untuk CSV
-                    csv_row = [action, sequence, frame_num, image_path] + list(keypoints)
+                    csv_row = [action, sequence, frame_num, str(image_path)] + list(keypoints)
                     
                     # 5. Tulis baris tersebut ke file CSV
-                    with open(CSV_FILE_NAME, mode='a', newline='') as f:
+                    with config.CSV_FILE_PATH.open(mode='a', newline='') as f:
                         writer = csv.writer(f)
                         writer.writerow(csv_row)
 

@@ -57,3 +57,8 @@ LOCK_COOLDOWN_SECONDS = 2
 
 # --- Inferensi ---
 PREDICTION_CONFIDENCE_THRESHOLD = 0.90
+
+# --- Face Recognition ---
+KNOWN_FACES_DIR = ROOT_DIR / 'known_faces' # Folder untuk foto master
+FACE_REC_TIMEOUT = 10 # Detik untuk memberi gestur setelah wajah dikenali
+FACE_REC_SCALE = 0.5 # Skala untuk mempercepat deteksi (0.5 = 50% lebih kecil)

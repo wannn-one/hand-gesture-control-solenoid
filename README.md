@@ -4,23 +4,23 @@ This document provides a comprehensive guide to the "Hand Gesture Control for So
 
 ## 1. Project Overview
 
-The `hand-gesture-control-solenoid` project is designed to provide a robust and flexible solution for controlling solenoid locks through real-time hand gesture recognition. It caters to different user needs by offering two distinct methodologies:
+The `hand-gesture-control-solenoid` project is designed to provide a robust and flexible solution for controlling solenoid locks. It caters to different user needs by offering two distinct methodologies:
 
-*   **Simple Rule-Based Approach**: Ideal for beginners, this method uses predefined hand gestures (open palm for unlock, fist for lock) detected by MediaPipe.
+*   **Simple Rule-Based Approach**: Ideal for beginners, this method uses predefined hand gestures (open palm for unlock, fist for lock) detected by MediaPipe. **This approach now includes a face recognition gate for enhanced security**, requiring a recognized user to be present before accepting gestures.
 *   **Machine Learning Approach**: For advanced users, this method allows for custom gesture training using a neural network, offering high accuracy and extensibility.
 
 Both approaches support various hardware configurations, including ESP32/Arduino for serial communication and Raspberry Pi for direct GPIO control.
 
-## 2. Features
+## 2. Features 
 
 ### 2.1. Simple Approach (`app/gesture_control.py`)
 
 This approach is designed for ease of use and quick deployment.
 
+*   **Face Recognition Gate**: Before accepting any gestures, the system must first recognize a pre-registered "master" face, adding a significant layer of security.
 *   **Predefined Gestures**:
     *   **Open palm**: Sends `COMMAND_OPEN` (default `b'1'`) to unlock.
     *   **Fist**: Sends `COMMAND_CLOSE` (default `b'0'`) to lock.
-*   **Auto-lock Functionality**: Automatically locks the solenoid after a configurable timeout if no open palm gesture is detected.
 *   **Real-time Detection**: Utilizes MediaPipe for efficient and real-time hand gesture recognition.
 *   **Lightweight Processing**: Optimized for single-camera processing.
 *   **Serial Communication**: Seamless integration with ESP32/Arduino boards for controlling the solenoid.
@@ -53,6 +53,7 @@ This advanced approach offers customization and higher accuracy.
 *   **Python**: Version 3.11 or higher (compatible with Windows, Linux, and Raspberry Pi).
 *   **Dependencies**: All required Python packages are listed in `requirements.txt`.
 
+
 ## 4. Project Structure
 
 The project is organized into a clear and logical directory structure:
@@ -62,7 +63,9 @@ hand-gesture-control-solenoid/
 ├── app/
 │   └── gesture_control.py    # Main application for simple rule-based control
 ├── config/
+│   └── __init__.py
 │   └── config.py             # Runtime configuration (COM port, camera, etc.)
+├── known_faces/              # Directory to store images of authorized users
 ├── dataset_take.py           # Tool to collect custom gesture data for ML
 ├── train.py                  # Script to train the neural network model
 ├── predict.py                # Script for ML-based gesture recognition (for RPi)
@@ -100,12 +103,15 @@ It is highly recommended to use a virtual environment to manage project dependen
 
 ### 5.2. Platform-Specific Dependencies
 
+*   **For dlib**:
+    The `dlib` libraries are included in `packages` folder for Windows and Linux. If you encounter issues, refer to the official [dlib installation guide](http://dlib.net/).
+    ```bash
+    cd packages
+    pip install dlib-19.22.99-cp310-cp310-win_amd64.whl
+    ```
 *   **Raspberry Pi (for GPIO control)**:
     ```bash
-    sudo apt update
-    sudo apt install python3-lgpio
-    # OR
-    pip install lgpio
+    pip install lgpio # Or sudo apt install python3-lgpio
     ```
 *   **Windows Only**:
     *   Ensure **Visual C++ Redistributable** is installed (often required for TensorFlow).
@@ -118,14 +124,12 @@ It is highly recommended to use a virtual environment to manage project dependen
 This option uses the `gesture_control.py` script for immediate use with predefined gestures.
 
 1.  **Hardware Setup**: Connect your ESP32/Arduino board to your computer via USB.
-2.  **Configuration**: Edit `config/config.py` to set your specific COM port (e.g., `ESP32_PORT = 'COM9'` on Windows or `'/dev/ttyUSB0'` on Linux).
-3.  **Run Application**:
+2.  **Add Your Face**: Create a folder named `known_faces` in the project's root directory. Place one or more clear photos of the authorized user(s) inside this folder (e.g., `your_name.jpg`).
+3.  **Configuration**: Edit `config/config.py` to set your specific COM port (e.g., `ESP32_PORT = 'COM9'` on Windows or `'/dev/ttyUSB0'` on Linux).
+4.  **Run Application**:
     ```bash
     python app/gesture_control.py
     ```
-4.  **Control**:
-    *   Show an **open palm** to unlock the solenoid.
-    *   Form a **fist** to lock the solenoid.
 
 ### 6.2. Option 2: Machine Learning Approach (Advanced users)
 
@@ -153,11 +157,12 @@ This option involves training a custom model and deploying it, typically on a Ra
 
 After following the installation and quick start steps:
 
-*   **Controls**:
-    *   **Open palm**: Detected when the index and middle fingertips are above their PIP (Proximal Interphalangeal) joints. This triggers the `COMMAND_OPEN` signal, unlocking the solenoid.
-    *   **Fist**: Detected when the index fingertip is below its PIP joint. This triggers the `COMMAND_CLOSE` signal, locking the solenoid.
-    *   **Auto-lock**: If no open palm gesture is detected for the duration specified by `AUTO_LOCK_SECONDS`, the system will automatically send the `COMMAND_CLOSE` signal to lock the solenoid.
-*   **Exiting**: Press the `q` key in the camera window to quit the application.
+*   **Control Flow**:
+    1.  **Face Search**: The application starts in "SEARCHING_FACE" mode. Position your face in front of the camera until it is recognized.
+    2.  **Gesture Window**: Once your face is recognized, the system switches to "WAITING_FOR_GESTURE" mode for a limited time (configurable via `FACE_REC_TIMEOUT`). You now have a few seconds to show a hand gesture.
+    3.  **Action**: Show an **open palm** to unlock or a **fist** to lock. After a gesture is performed, the system reverts to "SEARCHING_FACE" mode.
+    4.  **Timeout**: If no gesture is shown within the time limit, the system also reverts to "SEARCHING_FACE" mode.
+*   **Exiting**: Press `q` in the camera window to quit.
 
 ### 7.2. Machine Learning Approach
 
@@ -213,6 +218,11 @@ BAUD_RATE = 9600             # Serial communication speed (must match Arduino sk
 SERIAL_TIMEOUT = 1           # Serial read/write timeout in seconds
 SERIAL_STARTUP_DELAY = 2     # Delay in seconds for Arduino/ESP32 to initialize after connection
 
+# Face Recognition
+KNOWN_FACES_DIR = 'known_faces' # Directory containing master face images
+FACE_REC_SCALE = 0.25           # Scale factor for face recognition processing (lower is faster)
+FACE_REC_TIMEOUT = 10           # Seconds to wait for a gesture after a face is recognized
+
 # Camera Settings
 CAMERA_INDEX = 0             # Camera index (0 = default camera, 1 = second camera, etc.)
 CAMERA_WIDTH = 640           # Camera resolution width
@@ -222,7 +232,6 @@ WINDOW_TITLE = 'MediaPipe Hand Gesture Control' # Title for the camera display w
 # Gesture Detection
 MIN_DETECTION_CONFIDENCE = 0.7  # Minimum confidence score for hand detection (0.0-1.0)
 MIN_TRACKING_CONFIDENCE = 0.5   # Minimum confidence score for hand tracking (0.0-1.0)
-AUTO_LOCK_SECONDS = 5           # Time in seconds after which the solenoid auto-locks if no open palm is detected
 COMMAND_OPEN = b'1'             # Byte command sent to unlock the solenoid
 COMMAND_CLOSE = b'0'            # Byte command sent to lock the solenoid
 
@@ -354,6 +363,11 @@ Raspberry Pi           Relay Module          Solenoid Lock
     *   **No camera detected**: Ensure camera drivers are correctly installed and the camera is properly connected.
 *   **Serial Communication (ESP32/Arduino)**:
     *   **Permission denied**: On Linux, you might need to add your user to the `dialout` group (`sudo usermod -a -G dialout $USER`) or run the script with `sudo`. On Windows, ensure you run your terminal as an administrator.
+*   **Face Recognition Issues**:
+    *   **Face not detected**: Ensure your face is well-lit and clearly visible to the camera.
+    *   **Face not recognized**:
+        *   Make sure you have placed your image file(s) inside the `known_faces` directory.
+        *   Use clear, front-facing photos for better accuracy.
     *   **Incorrect COM port**: Verify `ESP32_PORT` in `config/config.py` matches the port assigned to your ESP32/Arduino.
     *   **Baud rate mismatch**: Ensure `BAUD_RATE` in `config/config.py` matches the `Serial.begin()` rate in your Arduino sketch.
 *   **Performance Issues**:
@@ -386,11 +400,14 @@ These settings are found in `config/config.py`.
 ### 11.1. Core Dependencies (`requirements.txt`)
 
 *   `tensorflow==2.16.1`: The primary neural network framework used for machine learning models.
+*   `face-recognition`: Library for recognizing and manipulating faces.
+*   `dlib`: A toolkit for machine learning and data analysis, required by `face-recognition`.
 *   `mediapipe`: Google's framework for on-device machine learning solutions, used for hand landmark detection.
 *   `opencv-python`: The widely used computer vision library for camera interaction and image processing.
 *   `numpy`: Fundamental package for numerical computing in Python.
 *   `pandas`: Used for data manipulation, especially for handling `dataset_landmarks.csv`.
 *   `scikit-learn`: Provides various machine learning utilities, including model training and evaluation tools.
+*   `loguru`: A library for pleasant and powerful logging.
 
 ### 11.2. Platform-Specific Dependencies
 

@@ -4,8 +4,14 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT_DIR / 'data'
 ARTIFACTS_DIR = ROOT_DIR / 'artifacts'
+
+# Path Model Lama (MLP) - Tetap disimpan untuk kompatibilitas
 MODEL_PATH = ARTIFACTS_DIR / 'model_gestur.h5'
 ENCODER_PATH = ARTIFACTS_DIR / 'label_encoder.pkl'
+
+# Path Model Baru (LSTM)
+MODEL_LSTM_PATH = ARTIFACTS_DIR / 'model_lightweight_do0.5_adam.keras'
+LABEL_ENCODER_PATH = ARTIFACTS_DIR / 'label_encoder.pkl'
 
 # --- Data Capture ---
 DATASET_DIR = DATA_DIR / 'Dataset_Gestur'
@@ -29,10 +35,10 @@ TRAIN_STRATIFY = True
 CAMERA_INDEX = 0  # indeks kamera default untuk aplikasi
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
-WINDOW_TITLE = 'MediaPipe Hand Gesture Control'  # judul window
+WINDOW_TITLE = 'Smart Lock System (Face + LSTM)'  # judul window
 
 # --- MediaPipe ---
-MIN_DETECTION_CONFIDENCE = 0.7  # minimum confidence untuk deteksi tangan
+MIN_DETECTION_CONFIDENCE = 0.5  # Diturunkan agar lebih sensitif mendeteksi tangan
 MIN_TRACKING_CONFIDENCE = 0.5  # minimum confidence untuk tracking tangan
 MAX_NUM_HANDS = 1  # batasi jumlah tangan yang diproses
 MODEL_COMPLEXITY = 0  # 0 = lebih ringan/cepat, 1/2 = lebih akurat
@@ -40,7 +46,7 @@ FRAME_SCALE = 0.75  # skala frame untuk diproses (1.0 = asli)
 PROCESS_EVERY_N_FRAMES = 1  # proses setiap N frame (1 = setiap frame)
 
 # --- Serial / ESP32 ---
-ESP32_PORT = 'COM9'  # port Arduino
+ESP32_PORT = 'COM9'  # port Arduino (Sesuaikan dengan komputer Anda)
 BAUD_RATE = 9600  # baud rate untuk komunikasi serial
 SERIAL_TIMEOUT = 1  # timeout untuk komunikasi serial
 SERIAL_STARTUP_DELAY = 2  # delay untuk menunggu Arduino siap
@@ -55,10 +61,15 @@ SOLENOID_OPEN_SECONDS = 3
 OPEN_COOLDOWN_SECONDS = 5
 LOCK_COOLDOWN_SECONDS = 2
 
-# --- Inferensi ---
+# --- Inferensi (Umum) ---
 PREDICTION_CONFIDENCE_THRESHOLD = 0.90
+
+# --- Konfigurasi LSTM (Baru) ---
+TIME_STEPS = 40 # Panjang sequence untuk LSTM (Harus sama dengan training)
+LSTM_THRESHOLD = 0.60 # Diturunkan agar lebih mudah mendeteksi gestur
 
 # --- Face Recognition ---
 KNOWN_FACES_DIR = ROOT_DIR / 'known_faces' # Folder untuk foto master
 FACE_REC_TIMEOUT = 10 # Detik untuk memberi gestur setelah wajah dikenali
+FACE_RECHECK_INTERVAL = 10 # Cek wajah ulang setiap 10 detik
 FACE_REC_SCALE = 0.5 # Skala untuk mempercepat deteksi (0.5 = 50% lebih kecil)

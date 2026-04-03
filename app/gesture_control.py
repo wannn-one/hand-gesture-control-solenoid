@@ -4,10 +4,15 @@ import mediapipe as mp
 import serial
 import time
 import os
+import sys
+
+# Tambahkan root directory ke path agar folder config dikenali
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import face_recognition
 import pickle
 from datetime import datetime
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 from loguru import logger
 from config import config
 

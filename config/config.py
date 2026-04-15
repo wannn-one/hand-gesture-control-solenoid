@@ -10,8 +10,9 @@ MODEL_PATH = ARTIFACTS_DIR / 'model_gestur.h5'
 ENCODER_PATH = ARTIFACTS_DIR / 'label_encoder.pkl'
 
 # Path Model Baru (LSTM)
-MODEL_LSTM_PATH = ARTIFACTS_DIR / 'best_model.h5'
+MODEL_LSTM_PATH = ARTIFACTS_DIR / 'best_model.tflite'
 LABEL_ENCODER_PATH = ARTIFACTS_DIR / 'label_encoder.pkl'
+SCALER_PATH = ARTIFACTS_DIR / 'scaler.pkl'
 
 # --- Data Capture ---
 DATASET_DIR = DATA_DIR / 'Dataset_Gestur'

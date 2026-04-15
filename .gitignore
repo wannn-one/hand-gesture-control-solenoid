@@ -92,7 +92,7 @@ config/*.local.py
 *.mp4
 *.mov
 *.mkv
-*.png
+/*.png
 *.jpg
 *.jpeg
 

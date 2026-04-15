@@ -25,15 +25,15 @@ This approach is designed for ease of use and quick deployment.
 *   **Lightweight Processing**: Optimized for single-camera processing.
 *   **Serial Communication**: Seamless integration with ESP32/Arduino boards for controlling the solenoid.
 
-### 2.2. Machine Learning Approach (`dataset_take.py`, `train.py`, `predict.py`)
+### 2.2. Machine Learning Approach (`data_pipeline/dataset_take.py`, `training/train.ipynb`, `app/predict.py`)
 
-This advanced approach offers customization and higher accuracy.
+This advanced approach offers dynamic sequence recognition, custom gesture training, and robust multithreaded performance.
 
-*   **Custom Gesture Training**: Allows users to define and train their own hand gestures using a neural network model.
-*   **Dataset Collection Tool**: Includes `dataset_take.py` for easily gathering custom gesture data.
-*   **High Accuracy**: Achieves 90%+ confidence threshold for gesture recognition with trained models.
-*   **Raspberry Pi Support**: Direct GPIO control via `lgpio` library for Raspberry Pi devices.
-*   **Extensible**: New gesture types can be easily added and integrated into the system.
+*   **Multithreaded Architecture**: Camera I/O, AI Inference (MLThread), and GPIO actions run on independent threads, completely eliminating video lagging or IO blocks.
+*   **Dynamic Custom Gestures (LSTM)**: Allows training and recognizing continuous sequences of hand motions (using an LSTM model) rather than a single static sign.
+*   **Security Pipeline**: Employs a robust state-machine: `Face Recognition` -> `OK sign (Standby)` -> `Dynamic Gesture Sequence`.
+*   **TensorFlow Lite Integration**: Optimized lightweight model deployment (`best_model.tflite`) ensuring high real-time FPS on Raspberry Pi or standard PCs.
+*   **Extensible**: Modularized training using Jupyter Notebooks (`training/train.ipynb`), StandardScaler normalization, and an intuitive data collection pipeline (`data_pipeline/`).
 
 ## 3. Requirements
 
@@ -61,14 +61,19 @@ The project is organized into a clear and logical directory structure:
 ```
 hand-gesture-control-solenoid/
 ├── app/
-│   └── gesture_control.py    # Main application for simple rule-based control
+│   ├── gesture_control.py    # Main application for simple rule-based control
+│   └── predict.py            # Main application for ML execution (Multithreading & LSTM)
+├── artifacts/                # Directory storing built AI models (TFLite, Scaler)
 ├── config/
-│   └── __init__.py
-│   └── config.py             # Runtime configuration (COM port, camera, etc.)
-├── known_faces/              # Directory to store images of authorized users
-├── dataset_take.py           # Tool to collect custom gesture data for ML
-├── train.py                  # Script to train the neural network model
-├── predict.py                # Script for ML-based gesture recognition (for RPi)
+│   ├── __init__.py
+│   └── config.py             # Runtime configuration (COM port, camera, LSTM logic)
+├── data/                     # Output directory for raw landmarks CSV data
+├── data_pipeline/
+│   └── dataset_take.py       # Tool to record custom sequence dynamic gestures
+├── known_faces/              # Directory to store images of authorized users for face recog
+├── training/
+│   ├── train.ipynb           # Notebook to train LSTM model, export Scaler and TFLite
+│   └── save_scaler.py
 ├── requirements.txt          # Python dependencies
 ├── README.md                 # Project documentation
 └── LICENSE                   # Project license
@@ -133,23 +138,21 @@ This option uses the `gesture_control.py` script for immediate use with predefin
 
 ### 6.2. Option 2: Machine Learning Approach (Advanced users)
 
-This option involves training a custom model and deploying it, typically on a Raspberry Pi.
+This option involves training a customized dynamic gesture sequence model via LSTM and deploying it.
 
 1.  **Collect Data**:
     ```bash
-    python dataset_take.py
+    python data_pipeline/dataset_take.py
     ```
-    Follow the on-screen instructions to record your custom gestures. This will create `dataset_landmarks.csv`.
+    Follow the on-screen instructions to record sequential gestures. This creates `dataset_landmarks.csv` inside `data` folder.
 2.  **Train Model**:
-    ```bash
-    python train.py
-    ```
-    This script will train a neural network model and save it as `model_gestur.h5` and the label encoder as `label_encoder.pkl`.
+    Open and execute `training/train.ipynb` using Jupyter/VS Code. 
+    This trains the LSTM Neural Network and automatically exports `best_model.tflite`, `label_encoder.pkl`, and `scaler.pkl` to the `artifacts/` folder.
 3.  **Deploy**:
     ```bash
-    python predict.py
+    python app/predict.py
     ```
-    This script uses the trained model for real-time gesture recognition and controls GPIO on a Raspberry Pi.
+    This script runs the actual smart lock pipeline (Face Scanning -> "OK" Trigger -> Dynamic Sequence -> Solenoid Control).
 
 ## 7. Detailed Usage Instructions
 
@@ -166,44 +169,44 @@ After following the installation and quick start steps:
 
 ### 7.2. Machine Learning Approach
 
-#### 7.2.1. Step 1: Collect Training Data (`dataset_take.py`)
+#### 7.2.1. Step 1: Collect Training Data (`data_pipeline/dataset_take.py`)
 
-This script helps you build a dataset of hand landmarks for your custom gestures.
+This script helps you build a dataset of dynamic hand motions.
 
 ```bash
-python dataset_take.py
+python data_pipeline/dataset_take.py
 ```
 
 *   The script will display a camera feed.
-*   **Recording**: Press `S` to start recording a sequence of landmarks for a specific gesture. Repeat this for multiple sequences per gesture.
-*   **Default Gestures**: The script is configured to collect data for `buka_kunci` (unlock) and `kunci` (lock) by default. You can modify the script to add more gesture types.
-*   **Output**: This process generates `dataset_landmarks.csv`, which contains normalized hand landmark coordinates for each recorded gesture.
-*   **Quitting**: Press `Q` to quit the data collection tool.
+*   **Recording**: Stand by, it will countdown automatically for each sequence. Show the continuous gesture over the specified `TIME_STEPS`.
+*   **Default Gestures**: Predefined for unlocking/locking in `config/config.py`.
+*   **Output**: Hand coordinates are captured and stored in `data/dataset_landmarks.csv`.
+*   **Quitting**: Press `Q` to quit data collection.
 
-#### 7.2.2. Step 2: Train the Model (`train.py`)
+#### 7.2.2. Step 2: Train the Model (`training/train.ipynb`)
 
-Once you have collected sufficient data, use this script to train your neural network model.
+Execute the Jupyter Notebook to build the intelligence.
 
-```bash
-python train.py
-```
+*   Open `training/train.ipynb`.
+*   **Functionality**: It loads the `.csv`, uses `StandardScaler` to normalize dimensions, handles data splits natively, and trains a highly accurate stacked-LSTM architecture.
+*   **Outputs (Saved in `artifacts/`)**:
+    *   `best_model.tflite`: Fast, minimal footprint inference model.
+    *   `label_encoder.pkl`: Numerical to text string mapping.
+    *   `scaler.pkl`: Standarzation parameters required for robust runtime predictions.
 
-*   This script reads `dataset_landmarks.csv`.
-*   It trains a neural network model based on the collected data.
-*   **Output**:
-    *   `model_gestur.h5`: The trained neural network model.
-    *   `label_encoder.pkl`: A file containing the mapping of gesture names to numerical labels, essential for prediction.
+#### 7.2.3. Step 3: Deploy Execution (`app/predict.py`)
 
-#### 7.2.3. Step 3: Deploy with Raspberry Pi (`predict.py`)
-
-This script uses the trained model to perform real-time gesture recognition and control GPIO pins on a Raspberry Pi.
+This launches the multithreaded AI logic.
 
 ```bash
-python predict.py
+python app/predict.py
 ```
 
-*   Ensure `model_gestur.h5` and `label_encoder.pkl` are in the same directory as `predict.py`.
-*   The script will use the webcam to detect hands, predict gestures using the loaded model, and activate the configured GPIO pin on the Raspberry Pi accordingly.
+*   **Security Protocol Workflow**:
+    1.  **`SEARCHING_FACE`**: Wait for a registered face (`known_faces/` folder) to authenticate.
+    2.  **`SESSION_STANDBY`**: Once authenticated, flash an "OK" gesture (thumb & index united) to prepare the recording sequence.
+    3.  **`SESSION_RECORDING`**: Perform your dynamic hand gesture motion smoothly as the timeline records it.
+    4.  **`Action`**: Upon completion, if prediction clears the `LSTM_THRESHOLD`, the system unlocks the Solenoid lock seamlessly.
 
 ## 8. Configuration
 
@@ -277,24 +280,11 @@ void loop() {
 }
 ```
 
-#### 9.1.3. ESP32/Arduino Wiring Diagram (Text-based)
+#### 9.1.3. ESP32/Arduino Wiring Diagram
 
-```
-ESP32/Arduino          Relay Module          Solenoid Lock
-┌─────────────┐       ┌─────────────┐       ┌─────────────┐
-│    VIN      │──────▶│    VCC      │       │             │
-│    GND      │──────▶│    GND      │       │             │
-│   GPIO4     │──────▶│     IN      │       │             │
-└─────────────┘       │             │       │             │
-                      │    COM      │◀──────│ 12V Supply+ │
-                      │     NO      │──────▶│ Solenoid+   │
-                      └─────────────┘       │ Solenoid-   │◀──┐
-                                           └─────────────┘   │
-                                                            │
-                                           ┌─────────────┐   │
-                                           │ 12V Supply- │───┘
-                                           └─────────────┘
-```
+<p align="center">
+  <img src="docs/esp_diagram.png" alt="ESP32/Arduino Wiring Diagram">
+</p>
 
 *   **ESP32/Arduino VIN/5V** to **Relay VCC**
 *   **ESP32/Arduino GND** to **Relay GND**
@@ -304,6 +294,8 @@ ESP32/Arduino          Relay Module          Solenoid Lock
 *   **Solenoid Negative** to **12V Power Supply Negative**
 
 ### 9.2. Raspberry Pi Setup (ML Approach)
+
+> **Note:** For a comprehensive, step-by-step software installation guide specifically for Raspberry Pi (including OS flashing, environment setup, and auto-start), please refer to the dedicated [Raspberry Pi Setup Guide](docs/README.md).
 
 #### 9.2.1. Required Components
 
@@ -319,24 +311,11 @@ ESP32/Arduino          Relay Module          Solenoid Lock
 *   **5V/3.3V**: Connect to the relay's VCC.
 *   **GND**: Connect to the common ground.
 
-#### 9.2.3. Raspberry Pi Wiring Diagram (Text-based)
+#### 9.2.3. Raspberry Pi Wiring Diagram
 
-```
-Raspberry Pi           Relay Module          Solenoid Lock
-┌─────────────┐       ┌─────────────┐       ┌─────────────┐
-│   5V/3.3V   │──────▶│    VCC      │       │             │
-│    GND      │──────▶│    GND      │       │             │
-│  GPIO17     │──────▶│     IN      │       │             │
-└─────────────┘       │             │       │             │
-                      │    COM      │◀──────│ 12V Supply+ │
-                      │     NO      │──────▶│ Solenoid+   │
-                      └─────────────┘       │ Solenoid-   │◀──┐
-                                           └─────────────┘   │
-                                                            │
-                                           ┌─────────────┐   │
-                                           │ 12V Supply- │───┘
-                                           └─────────────┘
-```
+<p align="center">
+  <img src="docs/raspi_diagram.png" alt="Raspberry Pi Wiring Diagram">
+</p>
 
 *   **Raspberry Pi 5V/3.3V** to **Relay VCC**
 *   **Raspberry Pi GND** to **Relay GND**
@@ -374,7 +353,7 @@ Raspberry Pi           Relay Module          Solenoid Lock
     *   **High CPU usage / Slow detection**: Refer to the "Performance Optimization Tips" section below.
     *   **Window not rendering**: Ensure your display environment is correctly set up and no other application is locking the camera feed.
 *   **Machine Learning Issues**:
-    *   **Model not loading**: Confirm that `model_gestur.h5` and `label_encoder.pkl` are present in the same directory as `predict.py` (or `train.py` if applicable).
+    *   **Model not loading**: Confirm that the `.tflite` model, `label_encoder.pkl`, and `scaler.pkl` exist correctly inside the `artifacts/` folder. Ensure you've executed `train.ipynb`.
 
 ### 10.2. Performance Optimization Tips
 

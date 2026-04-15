@@ -4,6 +4,13 @@ This directory serves as the database for storing photos of authorized users who
 
 Therefore, when you first clone this repository, this folder will be empty (or only contain this `README.md` file). You **must** populate this folder with valid reference photos for the face recognition system to work.
 
+## Integration with Dynamic Gesture Recognition
+
+With the recent updates to the system (multithreading and LSTM implementation in `app/predict.py`), Face Recognition now acts as the **first layer of security** in a multi-stage pipeline:
+1. **`SEARCHING_FACE` State**: The camera continuously scans for faces. If a face matches a photo in this directory, the system starts a session for that user (`SESSION_STANDBY`).
+2. **Dynamic Gestures**: Once authorized, the user triggers the command recording with an "OK" gesture, followed by dynamic hand gestures (processed via the trained LSTM model and StandardScaler from the `training/` folder) to execute actions like opening or closing the solenoid lock.
+3. **Session Security**: If the recognized user leaves the camera frame, the system automatically drops the session and returns to the `SEARCHING_FACE` state.
+
 ## How to Add a New User
 
 1. Prepare a clear, front-facing photo of the user.
@@ -15,5 +22,5 @@ Therefore, when you first clone this repository, this folder will be empty (or o
 ## Additional Rules & Troubleshooting
 
 * **Supported Formats:** `.jpg`, `.jpeg`, `.png`.
-* If this directory is empty or contains no valid images when you run the system (`app/predict.py` or `app/gesture_control.py`), you will receive a terminal warning, and the system will be permanently blocked at the "SEARCHING_FACE" state (since no one is authorized).
-* The system automatically scans the folder on startup. You simply need to restart the script after adding a new photo for the face to be registered.
+* If this directory is empty or contains no valid images when you run the system (`app/predict.py`), you will receive a terminal warning, and the system will be permanently blocked at the "SEARCHING_FACE" state (since no one is authorized).
+* The system automatically scans the folder on startup. You simply need to restart the main script after adding a new photo for the face to be registered.

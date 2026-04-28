@@ -74,3 +74,9 @@ KNOWN_FACES_DIR = ROOT_DIR / 'known_faces' # Folder untuk foto master
 FACE_REC_TIMEOUT = 10 # Detik untuk memberi gestur setelah wajah dikenali
 FACE_RECHECK_INTERVAL = 10 # Cek wajah ulang setiap 10 detik
 FACE_REC_SCALE = 0.5 # Skala untuk mempercepat deteksi (0.5 = 50% lebih kecil)
+
+# --- Pengujian / Data Collection ---
+TEST_COUNTDOWN_SECONDS = 3      # Hitung mundur sebelum capture (detik)
+TEST_DEFAULT_TRIALS = 30        # Jumlah default percobaan per sesi
+TEST_FPS_DURATION = 60          # Durasi default uji FPS (detik)
+TEST_RESULTS_DIR = ROOT_DIR / 'test_results'  # Folder output CSV

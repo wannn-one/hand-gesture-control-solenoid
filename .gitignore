@@ -102,3 +102,9 @@ mediapipe/modules/face_landmark/*_cache/
 # Lock files
 poetry.lock
 Pipfile.lock 
+
+training/eval_plots.zip
+training/evaluate_imperfect.py
+
+app/*.md
+app/test_collect.py

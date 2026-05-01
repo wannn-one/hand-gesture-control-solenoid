@@ -190,3 +190,70 @@ TEST_RESULTS_DIR = ROOT_DIR / 'test_results'  # Folder output CSV
 - **Lux** diisi manual sesuai pembacaan lux meter
 - Script **tidak mengaktifkan solenoid** — aman tanpa hardware aktuator
 - Pipeline face recognition & gesture recognition **sama persis** dengan `predict.py`
+
+---
+
+## Apa Itu Ground Truth?
+
+**Ground truth = kenyataan** tentang orang yang berdiri di depan kamera.
+Ini diisi di **Menu 2 (Status Subjek)** dan menjadi acuan untuk menentukan TP/TN/FP/FN.
+
+- Jika orang yang di depan kamera **wajahnya ada** di folder `known_faces/` → pilih **Terdaftar**
+- Jika orang yang di depan kamera **wajahnya tidak ada** di folder `known_faces/` → pilih **Tidak Terdaftar**
+
+> ⚠️ Jangan salah isi! Kalau ground truth salah, semua hasil TP/TN/FP/FN jadi tidak valid.
+
+### Arti Hasil (TP / TN / FP / FN)
+
+| Hasil | Status (Ground Truth) | Sistem Mengenali? | Artinya |
+|-------|-----------------------|-------------------|---------|
+| **TP** | Terdaftar | ✅ Ya | Sistem **benar** mengenali |
+| **TN** | Tidak Terdaftar | ❌ Tidak (Unknown) | Sistem **benar** menolak |
+| **FN** | Terdaftar | ❌ Tidak (Unknown) | Sistem **gagal** mengenali |
+| **FP** | Tidak Terdaftar | ✅ Ya (salah orang) | Sistem **salah** mengenali |
+
+---
+
+## Panduan Langkah-demi-Langkah
+
+### Skenario 1: Uji Orang Terdaftar (menghasilkan TP atau FN)
+
+1. Pastikan `known_faces/` sudah ada foto `vina.jpg`
+2. **Vina** berdiri di depan kamera
+3. Setting menu:
+   - Menu 1 → Vina
+   - Menu 2 → **Terdaftar**
+   - Menu 3 → (sesuai kondisi, misal Terang)
+   - Menu 4 → (isi angka lux dari lux meter)
+   - Menu 5 → 720
+   - Menu 6 → Face Recognition
+   - Menu 7 → Face Only
+   - Menu 8 → 30
+4. Tekan **9** (Mulai)
+5. Tekan **SPASI** → countdown → capture → hasil muncul
+6. Tekan **SPASI lagi** untuk percobaan ke-2, ke-3, ... sampai 30
+7. Setelah 30x, sesi selesai otomatis
+
+Jika sistem kenali Vina → **TP**. Jika gagal → **FN**.
+
+### Skenario 2: Uji Orang Tidak Terdaftar (menghasilkan TN atau FP)
+
+1. **Raka** (yang wajahnya TIDAK ada di `known_faces/`) berdiri di depan kamera
+2. Setting menu:
+   - Menu 1 → Raka
+   - Menu 2 → **Tidak Terdaftar**
+   - (sisanya sama)
+3. Jalankan 30 percobaan
+
+Jika sistem tolak (Unknown) → **TN**. Jika salah kenali → **FP**.
+
+### Checklist Pengujian Lengkap (untuk Bab 4)
+
+Ulangi skenario di atas untuk setiap kombinasi:
+
+- **4 subjek**: Vina, Zafa, Nopal + 1 orang asing (Raka/Orang_Lain)
+- **3 kondisi cahaya**: Terang, Lampu, Gelap
+- **2 resolusi**: 720p, 480p
+- **Masing-masing 3-5 percobaan** (minimal 30 data total per jenis uji)
+
+Semua data otomatis masuk ke **1 file CSV** (`hasil_pengujian.csv`) karena auto-append.

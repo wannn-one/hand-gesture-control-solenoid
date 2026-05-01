@@ -14,12 +14,16 @@ from typing import List, Tuple, Any
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config import config
 
+# Nama harus SAMA PERSIS dengan nama file di known_faces/ (tanpa ekstensi)
+# Contoh: known_faces/vina.jpg → "vina"
+# Subjek yang TIDAK terdaftar tidak perlu ada fotonya di known_faces/
 DAFTAR_SUBJEK = [
-    "Vina",
-    "Zafa",
-    "Nopal",
-    "Raka",
-    "Orang_Lain",
+    "ikhwan",       # ← sudah ada di known_faces/ikhwan.jpeg
+    "vina",         # ← tambahkan known_faces/vina.jpg jika terdaftar
+    "zafa",         # ← tambahkan known_faces/zafa.jpg jika terdaftar
+    "nopal",        # ← tambahkan known_faces/nopal.jpg jika terdaftar
+    "raka",         # ← subjek tidak terdaftar (JANGAN taruh foto)
+    "orang_lain",   # ← subjek tidak terdaftar (JANGAN taruh foto)
 ]
 
 DAFTAR_STATUS = ["Terdaftar", "Tidak Terdaftar"]
@@ -165,6 +169,7 @@ class TestConfig:
         self.jenis_uji: str = DAFTAR_JENIS_UJI[0]
         self.mode_sistem: str = DAFTAR_MODE[1]
         self.jumlah: int = config.TEST_DEFAULT_TRIALS
+        self.target_gestur: str = "buka_kunci"
 
     def summary(self) -> str:
         lines = [
@@ -354,11 +359,8 @@ def run_test(tc: TestConfig):
 
             prediksi = pred_label
             confidence = f"{conf:.4f}"
-            # Tentukan ground truth dari jenis gestur berdasarkan status
-            # Untuk gesture test: "Terdaftar" berarti gestur seharusnya dikenali
-            # Label gestur ditentukan dari nama (bisa juga ditambahkan menu terpisah)
-            # Sederhananya: correct jika prediksi sesuai gestur yang dilakukan
-            hasil = "correct" if pred_label == tc.nama else "wrong"
+            # Sederhananya: correct jika prediksi sesuai gestur target yang dilakukan
+            hasil = "correct" if pred_label == tc.target_gestur else "wrong"
             latency = gest_latency
             fps_val = np.mean(fps_list) if fps_list else 0
 
@@ -479,6 +481,10 @@ def main():
                     print("  [!] Masukkan angka.")
 
         elif c == "9":
+            need_gesture = tc.jenis_uji == "Gesture Recognition" or tc.mode_sistem in ("Gesture Only", "Full System")
+            if need_gesture:
+                idx = pick_menu("Gestur Target yang akan dilakukan:", ["buka_kunci", "kunci"])
+                tc.target_gestur = ["buka_kunci", "kunci"][idx]
             run_test(tc)
 
         elif c == "0":

@@ -35,13 +35,7 @@ DAFTAR_CAHAYA = [
 DAFTAR_RESOLUSI = ["720", "480"]
 DAFTAR_JENIS_UJI = ["Face Recognition", "Gesture Recognition"]
 DAFTAR_MODE = ["Idle", "Face Only", "Gesture Only", "Full System"]
-
-CSV_FILENAME = "hasil_pengujian.csv"
-CSV_HEADER = [
-    "no", "nama", "status", "kondisi_cahaya", "lux", "resolusi",
-    "jenis_uji", "mode_sistem", "prediksi", "hasil", "confidence",
-    "fps", "latency_ms", "timestamp",
-]
+DAFTAR_JARAK = ["40", "60"]
 
 def load_known_faces() -> Tuple[List[np.ndarray], List[str]]:
     known_encodings, known_names = [], []
@@ -133,12 +127,12 @@ def countdown_display(cap, seconds: int):
 def ensure_results_dir():
     os.makedirs(config.TEST_RESULTS_DIR, exist_ok=True)
 
-def append_csv(filepath: str, row: list):
+def append_csv(filepath: str, row: list, header: list):
     write_header = not os.path.exists(filepath)
     with open(filepath, 'a', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
         if write_header:
-            w.writerow(CSV_HEADER)
+            w.writerow(header)
         w.writerow(row)
 
 def pick_menu(title: str, options: list) -> int:
@@ -168,6 +162,7 @@ class TestConfig:
         self.resolusi: str = DAFTAR_RESOLUSI[0]
         self.jenis_uji: str = DAFTAR_JENIS_UJI[0]
         self.mode_sistem: str = DAFTAR_MODE[1]
+        self.jarak: str = DAFTAR_JARAK[0]
         self.jumlah: int = config.TEST_DEFAULT_TRIALS
         self.target_gestur: str = "buka_kunci"
 
@@ -180,6 +175,7 @@ class TestConfig:
             f"  Resolusi      : {self.resolusi}p",
             f"  Jenis Uji     : {self.jenis_uji}",
             f"  Mode Sistem   : {self.mode_sistem}",
+            f"  Jarak         : {self.jarak}cm",
             f"  Jumlah        : {self.jumlah}x",
         ]
         return "\n".join(lines)
@@ -187,7 +183,6 @@ class TestConfig:
 def run_test(tc: TestConfig):
     """Jalankan loop pengujian sesuai konfigurasi."""
     ensure_results_dir()
-    csv_path = str(config.TEST_RESULTS_DIR / CSV_FILENAME)
 
     # Load resources sesuai kebutuhan
     known_enc, known_names = [], []
@@ -379,13 +374,35 @@ def run_test(tc: TestConfig):
         # Log & Save
         trial += 1
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        row = [
-            trial, tc.nama, tc.status, tc.cahaya, tc.lux,
-            tc.resolusi, tc.jenis_uji, tc.mode_sistem,
-            prediksi, hasil, confidence,
-            f"{fps_val:.1f}", f"{latency:.1f}", ts,
-        ]
-        append_csv(csv_path, row)
+        
+        if tc.jenis_uji == "Face Recognition":
+            csv_path = str(config.TEST_RESULTS_DIR / "hasil_pengujian_face.csv")
+            header = [
+                "no", "nama", "status", "jarak_cm", "kondisi_cahaya", "lux", "resolusi",
+                "mode_sistem", "prediksi", "hasil", "confidence",
+                "fps", "latency_ms", "timestamp",
+            ]
+            row = [
+                trial, tc.nama, tc.status, tc.jarak, tc.cahaya, tc.lux,
+                tc.resolusi, tc.mode_sistem,
+                prediksi, hasil, confidence,
+                f"{fps_val:.1f}", f"{latency:.1f}", ts,
+            ]
+        else: # Gesture Recognition
+            csv_path = str(config.TEST_RESULTS_DIR / "hasil_pengujian_gesture.csv")
+            header = [
+                "no", "nama", "status", "jarak_cm", "kondisi_cahaya", "lux", "resolusi",
+                "mode_sistem", "target_gestur", "prediksi", "hasil", "confidence",
+                "fps", "latency_ms", "timestamp",
+            ]
+            row = [
+                trial, tc.nama, tc.status, tc.jarak, tc.cahaya, tc.lux,
+                tc.resolusi, tc.mode_sistem, tc.target_gestur,
+                prediksi, hasil, confidence,
+                f"{fps_val:.1f}", f"{latency:.1f}", ts,
+            ]
+            
+        append_csv(csv_path, row, header)
 
         # Terminal log
         print(f"  [{trial}/{tc.jumlah}] {tc.nama} | {tc.cahaya} | "
@@ -405,7 +422,7 @@ def run_test(tc: TestConfig):
         cv2.waitKey(1000)
 
     _cleanup(cap, holistic)
-    print(f"\n[DONE] {trial} percobaan selesai. CSV: {csv_path}")
+    print(f"\n[DONE] {trial} percobaan selesai. Data disimpan di folder test_results/")
 
 def _cleanup(cap, holistic):
     if holistic is not None:
@@ -430,8 +447,9 @@ def main():
         print("  5. Pilih Resolusi Kamera")
         print("  6. Pilih Jenis Pengujian")
         print("  7. Pilih Mode Sistem")
-        print("  8. Jumlah Percobaan")
-        print("  9. Mulai Pengujian")
+        print("  8. Pilih Jarak")
+        print("  9. Jumlah Percobaan")
+        print("  10. Mulai Pengujian")
         print("  0. Keluar")
         print("=" * 50)
 
@@ -471,6 +489,10 @@ def main():
             tc.mode_sistem = DAFTAR_MODE[idx]
 
         elif c == "8":
+            idx = pick_menu("Jarak:", DAFTAR_JARAK)
+            tc.jarak = (DAFTAR_JARAK[idx])
+
+        elif c == "9":
             while True:
                 try:
                     val = int(input(f"  Jumlah percobaan [{tc.jumlah}]: ")
@@ -480,7 +502,7 @@ def main():
                 except ValueError:
                     print("  [!] Masukkan angka.")
 
-        elif c == "9":
+        elif c == "10":
             need_gesture = tc.jenis_uji == "Gesture Recognition" or tc.mode_sistem in ("Gesture Only", "Full System")
             if need_gesture:
                 idx = pick_menu("Gestur Target yang akan dilakukan:", ["buka_kunci", "kunci"])

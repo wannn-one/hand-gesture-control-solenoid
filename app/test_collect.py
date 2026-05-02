@@ -503,8 +503,7 @@ def main():
                     print("  [!] Masukkan angka.")
 
         elif c == "10":
-            need_gesture = tc.jenis_uji == "Gesture Recognition" or tc.mode_sistem in ("Gesture Only", "Full System")
-            if need_gesture:
+            if tc.jenis_uji == "Gesture Recognition":
                 idx = pick_menu("Gestur Target yang akan dilakukan:", ["buka_kunci", "kunci"])
                 tc.target_gestur = ["buka_kunci", "kunci"][idx]
             run_test(tc)

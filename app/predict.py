@@ -200,6 +200,9 @@ class MLThread:
         self.state_start_time: float = 0
         self.sequence: List[np.ndarray] = []
         
+        self.ok_gesture_start_time: float = 0.0
+        self.ok_gesture_duration_required: float = 2
+        
         self.current_result_message: str = ""
         self.current_result_color: Tuple[int, int, int] = (0, 255, 0)
         
@@ -282,16 +285,32 @@ class MLThread:
                 self.system_state = "SEARCHING_FACE"
                 return
                 
-        trigger_active = results and is_ok_gesture(results.left_hand_landmarks)
+        trigger_active = False
+        if results:
+            if is_ok_gesture(results.left_hand_landmarks) or is_ok_gesture(results.right_hand_landmarks):
+                trigger_active = True
 
         if trigger_active:
-            self.system_state = "SESSION_COUNTDOWN"
-            self.state_start_time = now
-            logger.info("Trigger OK dideteksi! Memulai countdown.")
+            if self.ok_gesture_start_time == 0:
+                self.ok_gesture_start_time = now
+            elif now - self.ok_gesture_start_time >= self.ok_gesture_duration_required:
+                self.system_state = "SESSION_COUNTDOWN"
+                self.state_start_time = now
+                self.ok_gesture_start_time = 0
+                logger.info("Trigger OK dideteksi (ditahan)! Memulai countdown.")
+        else:
+            self.ok_gesture_start_time = 0
 
         cv2.rectangle(debug_image, (0, 0), (640, 80), (50, 50, 50), -1)
         self._draw_text(debug_image, f"User: {self.current_user}", (10, 30))
-        self._draw_text(debug_image, "Beri Pose 'OK' untuk Perintah", (10, 60), 0.6, (255, 255, 255), 1)
+        
+        if self.ok_gesture_start_time > 0:
+            hold_time = now - self.ok_gesture_start_time
+            progress = min(1.0, hold_time / self.ok_gesture_duration_required)
+            cv2.rectangle(debug_image, (10, 70), (int(10 + progress * 200), 80), (0, 255, 0), -1)
+            self._draw_text(debug_image, "Tahan 'OK'...", (10, 60), 0.6, (0, 255, 0), 1)
+        else:
+            self._draw_text(debug_image, "Beri Pose 'OK' untuk Perintah", (10, 60), 0.6, (255, 255, 255), 1)
 
     def _handle_session_countdown(self, debug_image: np.ndarray, now: float) -> None:
         elapsed = now - self.state_start_time

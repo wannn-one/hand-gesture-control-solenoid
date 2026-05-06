@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Smart Lock Predict
+Comment=Jalankan Aplikasi Face & Gesture Smart Lock
+Exec=lxterminal -e "bash /home/yuvina/Desktop/hand-gesture-control-solenoid/predict.sh"
+Icon=utilities-terminal
+Terminal=false
+Type=Application
+Categories=Application;

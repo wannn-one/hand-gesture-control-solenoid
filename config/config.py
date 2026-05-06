@@ -72,7 +72,7 @@ LSTM_THRESHOLD = 0.60 # Diturunkan agar lebih mudah mendeteksi gestur
 # --- Face Recognition ---
 KNOWN_FACES_DIR = ROOT_DIR / 'known_faces' # Folder untuk foto master
 FACE_REC_TIMEOUT = 10 # Detik untuk memberi gestur setelah wajah dikenali
-FACE_RECHECK_INTERVAL = 10 # Cek wajah ulang setiap 10 detik
+FACE_RECHECK_INTERVAL = 2 # Cek wajah ulang setiap 10 detik
 FACE_REC_SCALE = 0.5 # Skala untuk mempercepat deteksi (0.5 = 50% lebih kecil)
 
 # --- Pengujian / Data Collection ---

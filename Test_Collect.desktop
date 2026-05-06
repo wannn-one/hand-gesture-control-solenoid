@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Smart Lock Test Collect
+Comment=Jalankan Data Collection Gestur
+Exec=lxterminal -e "bash /home/yuvina/Desktop/hand-gesture-control-solenoid/test_collect.sh"
+Icon=utilities-terminal
+Terminal=false
+Type=Application
+Categories=Application;

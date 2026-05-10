@@ -342,6 +342,31 @@ class MLThread:
         """DRY: Fungsi khusus untuk menjalankan inferensi ML pada sequence."""
         input_data = np.array(self.sequence).astype(np.float32)
         
+        # 1. Cek jika terlalu banyak frame kosong (tangan terlepas dari kamera)
+        empty_frames = int(np.sum(np.all(input_data == 0, axis=1)))
+        if empty_frames > (config.TIME_STEPS * 0.7):
+            logger.warning(f"Gestur diabaikan: Tangan tidak terdeteksi pada {empty_frames}/{config.TIME_STEPS} frame.")
+            self.system_state = "SESSION_RESULT_DISPLAY"
+            self.state_start_time = time.time()
+            self.current_result_message = "TIDAK ADA TANGAN"
+            self.current_result_color = (0, 0, 255)
+            self.sequence = []
+            return
+            
+        # 2. Cek apakah tangan bergerak atau hanya diam saja (mencegah salah tebak)
+        valid_frames = input_data[~np.all(input_data == 0, axis=1)]
+        if len(valid_frames) > 1:
+            variance = float(np.var(valid_frames, axis=0).mean())
+            # Jika rata-rata varians koordinat sangat kecil, berarti tangan diam
+            if variance < 0.0001: 
+                logger.warning(f"Gestur diabaikan: Tangan hanya diam (varians: {variance:.6f}).")
+                self.system_state = "SESSION_RESULT_DISPLAY"
+                self.state_start_time = time.time()
+                self.current_result_message = "TANGAN DIAM"
+                self.current_result_color = (0, 0, 255)
+                self.sequence = []
+                return
+        
         if self.scaler is not None:
             input_data = self.scaler.transform(input_data)
         

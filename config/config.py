@@ -80,3 +80,6 @@ TEST_COUNTDOWN_SECONDS = 3      # Hitung mundur sebelum capture (detik)
 TEST_DEFAULT_TRIALS = 30        # Jumlah default percobaan per sesi
 TEST_FPS_DURATION = 60          # Durasi default uji FPS (detik)
 TEST_RESULTS_DIR = ROOT_DIR / 'test_results'  # Folder output CSV
+
+# --- Resource Monitoring ---
+RESOURCE_SAMPLE_INTERVAL = 0.2  # Interval antar sampling CPU/RAM (detik)

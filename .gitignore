@@ -105,3 +105,5 @@ Pipfile.lock
 
 training/eval_plots.zip
 training/evaluate_imperfect.py
+
+test_results/

@@ -13,6 +13,7 @@ from typing import List, Tuple, Any
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config import config
+from resource_monitor import ResourceMonitor
 
 # Nama harus SAMA PERSIS dengan nama file di known_faces/ (tanpa ekstensi)
 # Contoh: known_faces/vina.jpg → "vina"
@@ -264,6 +265,10 @@ def run_test(tc: TestConfig):
         latency = 0.0
         fps_val = 0.0
 
+        # Inisialisasi resource monitor
+        monitor = ResourceMonitor(interval=config.RESOURCE_SAMPLE_INTERVAL)
+        monitor.start()
+
         # FACE RECOGNITION
         if need_face:
             t0 = time.time()
@@ -371,6 +376,9 @@ def run_test(tc: TestConfig):
             prediksi = "-"
             hasil = "-"
 
+        # Hentikan resource monitor dan ambil statistik
+        res_stats = monitor.stop()
+
         # Log & Save
         trial += 1
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -380,26 +388,36 @@ def run_test(tc: TestConfig):
             header = [
                 "no", "nama", "status", "jarak_cm", "kondisi_cahaya", "lux", "resolusi",
                 "mode_sistem", "prediksi", "hasil", "confidence",
-                "fps", "latency_ms", "timestamp",
+                "fps", "latency_ms",
+                "cpu_avg_pct", "cpu_max_pct", "ram_avg_pct", "ram_max_pct",
+                "timestamp",
             ]
             row = [
                 trial, tc.nama, tc.status, tc.jarak, tc.cahaya, tc.lux,
                 tc.resolusi, tc.mode_sistem,
                 prediksi, hasil, confidence,
-                f"{fps_val:.1f}", f"{latency:.1f}", ts,
+                f"{fps_val:.1f}", f"{latency:.1f}",
+                f"{res_stats['cpu_avg_pct']:.1f}", f"{res_stats['cpu_max_pct']:.1f}",
+                f"{res_stats['ram_avg_pct']:.1f}", f"{res_stats['ram_max_pct']:.1f}",
+                ts,
             ]
         else: # Gesture Recognition
             csv_path = str(config.TEST_RESULTS_DIR / "hasil_pengujian_gesture.csv")
             header = [
                 "no", "nama", "status", "jarak_cm", "kondisi_cahaya", "lux", "resolusi",
                 "mode_sistem", "target_gestur", "prediksi", "hasil", "confidence",
-                "fps", "latency_ms", "timestamp",
+                "fps", "latency_ms",
+                "cpu_avg_pct", "cpu_max_pct", "ram_avg_pct", "ram_max_pct",
+                "timestamp",
             ]
             row = [
                 trial, tc.nama, tc.status, tc.jarak, tc.cahaya, tc.lux,
                 tc.resolusi, tc.mode_sistem, tc.target_gestur,
                 prediksi, hasil, confidence,
-                f"{fps_val:.1f}", f"{latency:.1f}", ts,
+                f"{fps_val:.1f}", f"{latency:.1f}",
+                f"{res_stats['cpu_avg_pct']:.1f}", f"{res_stats['cpu_max_pct']:.1f}",
+                f"{res_stats['ram_avg_pct']:.1f}", f"{res_stats['ram_max_pct']:.1f}",
+                ts,
             ]
             
         append_csv(csv_path, row, header)
